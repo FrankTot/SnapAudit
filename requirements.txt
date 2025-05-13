@@ -1,0 +1,1 @@
+# Non servono librerie esterne per ora
