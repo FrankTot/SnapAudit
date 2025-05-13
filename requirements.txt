@@ -1,1 +1,0 @@
-# Non sono necessarie librerie esterne per il funzionamento base
