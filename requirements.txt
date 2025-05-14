@@ -1,1 +1,10 @@
-# Non servono librerie esterne per ora
+# SnapAudit/requirements.txt
+# Elenco delle dipendenze esterne richieste dal progetto.
+
+# Per ora, non servono librerie esterne oltre quelle standard di Python.
+# Se in futuro aggiungi librerie come 'psutil', 'nmap', 'PyYAML', ecc.,
+# aggiungile qui, una per riga.
+
+# Esempio:
+# psutil==5.9.0
+# PyYAML==6.0.1
