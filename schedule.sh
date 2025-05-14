@@ -9,13 +9,16 @@ cd "$(dirname "$0")"
 # Esegui lo script Python
 # Assicurati che 'python3' punti all'interprete corretto
 # Puoi specificare il percorso completo se necessario, es. /usr/bin/python3
-/usr/bin/python3 main.py A # Esegue tutte le scansioni ('A') senza mostrare il menu interattivo
+# Passa 'A' per eseguire tutte le scansioni.
+# L'output a terminale andrà nel file di log specificato nella crontab.
+# Quando eseguito in questo modo, il menu interattivo non viene mostrato.
+/usr/bin/python3 main.py A
 
-# NOTA: Quando eseguito da uno scheduler (cron, systemd), l'apertura automatica
-# del report potrebbe non funzionare o non essere desiderata.
-# Potresti voler modificare main.py per disabilitare l'apertura automatica
-# se rileva di essere eseguito senza un terminale interattivo,
-# oppure modificare questo script per gestire l'output del report (es. inviarlo via email).
+# NOTA: Quando eseguito da uno scheduler (cron, systemd), la visualizzazione
+# della tabella a terminale non sarà visibile interattivamente.
+# L'output verrà reindirizzato al file di log specificato nella crontab.
+# Il report testuale verrà comunque salvato nella directory 'reports/'.
+# L'opzione 'O' (Apri Ultimo Report) non è utilizzabile in esecuzione schedulata.
 
 # Esempio per cron (esegue ogni giorno alle 3:00 AM):
-# 0 3 * * * /bin/bash /path/to/your/SnapAudit/schedule.sh > /path/to/your/SnapAudit/cron.log 2>&1
+# 0 3 * * * /bin/bash /path/completo/alla/tua/directory/SnapAudit/schedule.sh > /path/completo/alla/tua/directory/SnapAudit/cron.log 2>&1
