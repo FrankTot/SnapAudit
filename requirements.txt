@@ -5,6 +5,5 @@
 # Se in futuro aggiungi librerie come 'psutil', 'nmap', 'PyYAML', ecc.,
 # aggiungile qui, una per riga.
 
-# Esempio:
-# psutil==5.9.0
-# PyYAML==6.0.1
+# Esempio per una tabella colorata nel terminale (richiede installazione):
+# rich==13.7.0
