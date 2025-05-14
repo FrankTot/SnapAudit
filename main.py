@@ -5,11 +5,19 @@ import os
 import time
 import subprocess
 import platform # Per controllare l'OS e aprire il file
-import textwrap # Per formattare il banner
+import textwrap # Per formattare il testo
 import glob # Per trovare file
 
 # Importa i moduli di scansione
 from modules import services, ports, users, files, report, permissions
+
+# --- Codici ANSI per i colori nel terminale ---
+# Puoi cambiare i codici se preferisci altri colori
+COLOR_BLUE = '\033[94m' # Blu chiaro
+COLOR_GREEN = '\033[92m' # Verde chiaro
+COLOR_RED = '\033[91m'   # Rosso chiaro
+COLOR_YELLOW = '\033[93m' # Giallo chiaro
+COLOR_RESET = '\033[0m' # Resetta il colore
 
 # --- Banner ASCII ---
 # Ho leggermente aggiustato il banner per adattarlo meglio al codice
@@ -67,29 +75,33 @@ def open_report_file(filepath):
     """
     try:
         if not os.path.exists(filepath):
-            print(f"Errore: Il file '{filepath}' non esiste.")
+            print(f"{COLOR_RED}Errore:{COLOR_RESET} Il file '{filepath}' non esiste.")
             return
 
         print(f"Tentativo di apertura del file: {filepath}")
         if platform.system() == "Linux":
             # xdg-open è il comando standard su molti desktop Linux
-            subprocess.run(["xdg-open", filepath], check=True)
+            # Aggiunto shell=True per provare a risolvere problemi di PATH o esecuzione in alcuni ambienti WSL
+            # Anche se shell=True può avere implicazioni di sicurezza, per questo uso specifico e locale è accettabile.
+            # Se il problema persiste, l'utente potrebbe dover configurare xdg-open o un'applicazione predefinita in WSL.
+            subprocess.run(["xdg-open", filepath], check=True, shell=True)
         elif platform.system() == "Darwin": # macOS
             subprocess.run(["open", filepath], check=True) # 'open' è il comando su macOS
         elif platform.system() == "Windows":
             os.startfile(filepath) # Metodo specifico di Windows
         else:
-            print(f"Impossibile aprire automaticamente il file su questo sistema operativo ({platform.system()}).")
+            print(f"{COLOR_YELLOW}Avviso:{COLOR_RESET} Impossibile aprire automaticamente il file su questo sistema operativo ({platform.system()}).")
             print(f"Apri manualmente il report: {filepath}")
     except FileNotFoundError:
-         print(f"Comando per aprire il file non trovato sul tuo sistema.")
+         print(f"{COLOR_RED}Errore:{COLOR_RESET} Comando per aprire il file non trovato sul tuo sistema.")
+         print(f"Assicurati che un'applicazione predefinita sia configurata per i file .txt e che il comando appropriato (es. xdg-open su Linux) sia nel PATH.")
          print(f"Apri manualmente il report: {filepath}")
     except subprocess.CalledProcessError as e:
-         print(f"Errore durante l'esecuzione del comando di apertura file: {e}")
+         print(f"{COLOR_RED}Errore:{COLOR_RESET} Durante l'esecuzione del comando di apertura file: {e}")
          print(f"Stderr: {e.stderr.strip()}") # Mostra stderr se disponibile
          print(f"Apri manualmente il report: {filepath}")
     except Exception as e:
-         print(f"Errore generico nell'apertura automatica del file: {e}")
+         print(f"{COLOR_RED}Errore generico:{COLOR_RESET} Nell'apertura automatica del file: {e}")
          print(f"Apri manualmente il report: {filepath}")
 
 # --- Funzione per trovare l'ultimo report ---
@@ -114,9 +126,12 @@ def find_latest_report(output_dir='reports', extension='.txt'):
 
     # Ordina i file per data di ultima modifica (il più recente sarà l'ultimo)
     # key=os.path.getctime usa il tempo di creazione, key=os.path.getmtime usa il tempo di modifica
-    latest_file = max(list_of_files, key=os.path.getmtime)
-
-    return latest_file
+    try:
+        latest_file = max(list_of_files, key=os.path.getmtime)
+        return latest_file
+    except Exception as e:
+        print(f"{COLOR_RED}Errore:{COLOR_RESET} Impossibile determinare l'ultimo file nella directory '{output_dir}': {e}")
+        return None
 
 
 # --- Funzione per Visualizzare i Dati nel Terminale (Tabella Semplice) ---
@@ -133,7 +148,16 @@ def display_data_in_terminal(data: dict):
     print("="*60)
 
     for section, content in data.items():
-        print(f"\n--- {section.upper()} ---")
+        # Aggiungi colore alla sezione (opzionale, puoi rimuoverlo se preferisci solo testo)
+        section_color = COLOR_BLUE # Colore di default per le sezioni
+        if section == 'Porte Aperte':
+            section_color = COLOR_RED # Rosso per le porte (spesso associate a rischi)
+        elif section == 'Permessi File Critici':
+            section_color = COLOR_YELLOW # Giallo per i permessi (richiedono attenzione)
+        elif section == 'Servizi Attivi':
+             section_color = COLOR_GREEN # Verde per i servizi (spesso normali)
+
+        print(f"\n{section_color}--- {section.upper()} ---{COLOR_RESET}")
 
         if isinstance(content, list) and content: # Se è una lista non vuota
             if isinstance(content[0], dict): # Se gli elementi sono dizionari (per tabelle)
@@ -150,16 +174,36 @@ def display_data_in_terminal(data: dict):
                 # Disegna l'intestazione della tabella
                 header_line = "+-" + "-+-".join("-" * col_widths[h] for h in headers) + "-+"
                 print(header_line)
-                header_row = "| " + " | ".join(h.ljust(col_widths[h]) for h in headers) + " |"
+                # Aggiungi colore all'intestazione della tabella (opzionale)
+                header_row = "| " + COLOR_BLUE + " | ".join(h.ljust(col_widths[h]) for h in headers) + COLOR_RESET + " |"
                 print(header_row)
                 print(header_line)
 
                 # Disegna le righe dei dati
-                for item in content:
+                for i, item in enumerate(content):
                     row_values = []
+                    # Alterna colori per le righe (opzionale)
+                    row_color = ""
+                    if i % 2 == 0:
+                        row_color = "" # Nessun colore per righe pari
+                    else:
+                        row_color = "\033[90m" # Grigio scuro per righe dispari (potrebbe non essere visibile su tutti i terminali)
+
                     for header in headers:
-                        value_str = str(item.get(header, '')).ljust(col_widths[header])
-                        row_values.append(value_str)
+                        value = item.get(header, '')
+                        value_str = str(value).ljust(col_widths[header])
+
+                        # Applica colore specifico per la colonna "Avviso di Sicurezza"
+                        if section == 'Permessi File Critici' and header == 'Avviso di Sicurezza':
+                            if 'AVVISO:' in value_str.strip():
+                                row_values.append(f"{COLOR_RED}{value_str}{COLOR_RESET}")
+                            elif value_str.strip() == 'OK':
+                                row_values.append(f"{COLOR_GREEN}{value_str}{COLOR_RESET}")
+                            else: # Per errori o altri messaggi
+                                row_values.append(f"{row_color}{value_str}{COLOR_RESET}")
+                        else:
+                            row_values.append(f"{row_color}{value_str}{COLOR_RESET}")
+
                     print("| " + " | ".join(row_values) + " |")
 
                 # Disegna la riga inferiore della tabella
@@ -180,10 +224,17 @@ def display_data_in_terminal(data: dict):
     print("="*60 + "\n")
 
 
-# --- Funzioni per il Menu ---
-def display_menu():
-    """Mostra il menu principale delle opzioni di scansione all'utente con il banner."""
-    print(BANNER) # Mostra il banner
+# --- Funzione per mostrare il banner colorato ---
+def display_banner():
+    """Mostra il banner ASCII colorato all'avvio."""
+    # Applica il colore al banner
+    colored_banner = f"{COLOR_BLUE}{BANNER}{COLOR_RESET}" # Usa il colore blu per il banner
+    print(colored_banner)
+
+
+# --- Funzione per mostrare solo le opzioni del menu ---
+def display_menu_options():
+    """Mostra solo le opzioni del menu (senza il banner)."""
     print("\n" + "="*50) # Aumentato la larghezza
     print("        SnapAudit Menu Principale")
     print("="*50)
@@ -200,16 +251,6 @@ def display_menu():
     print("  Q. Esci")
     print("="*50) # Aumentato la larghezza
 
-def get_user_selection():
-    """Ottiene la scelta dell'utente dal menu e la valida."""
-    while True:
-        choice = input("Seleziona un'opzione (1-5, A, O, Q): ").strip().lower() # Aggiunto 'O'
-        # Lista delle scelte valide (aggiorna se aggiungi opzioni)
-        valid_choices = ['1', '2', '3', '4', '5', 'a', 'o', 'q'] # Aggiunto 'o'
-        if choice in valid_choices:
-            return choice
-        else:
-            print("Opzione non valida. Inserisci il numero o la lettera corrispondente.")
 
 # --- Funzione Principale ---
 def main():
@@ -221,10 +262,11 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    display_banner() # Mostra il banner UNA SOLA VOLTA all'avvio
     print("Benvenuto in SnapAudit!")
 
     while True: # Loop principale del menu
-        display_menu()
+        display_menu_options() # Mostra solo le opzioni del menu in ogni iterazione
         choice = get_user_selection()
 
         if choice == 'q':
@@ -237,7 +279,7 @@ def main():
             if latest_report_path:
                 open_report_file(latest_report_path)
             else:
-                print(f"Nessun report '{report_format_file}' trovato nella directory '{output_dir}'.")
+                print(f"{COLOR_YELLOW}Avviso:{COLOR_RESET} Nessun report '{report_format_file}' trovato nella directory '{output_dir}'.")
             continue # Torna al menu dopo aver provato ad aprire il report
 
         # Se la scelta non è 'q' o 'o', allora è una o più scansioni
@@ -295,7 +337,7 @@ def main():
 
         # Assicurati che ci siano dati da riportare prima di generare il report o visualizzare
         if not data or all(not content for content in data.values()):
-            print("\nNessun dato raccolto dalle scansioni selezionate. Impossibile generare un report o visualizzare risultati.")
+            print(f"\n{COLOR_YELLOW}Avviso:{COLOR_RESET} Nessun dato raccolto dalle scansioni selezionate. Impossibile generare un report o visualizzare risultati.")
             continue # Torna al menu
 
         print("\nPreparazione report e visualizzazione...")
@@ -308,7 +350,7 @@ def main():
         if report_path:
             print(f"✅ Report testuale generato con successo: {report_path}")
         else:
-            print("❌ Errore durante la generazione del report testuale.")
+            print(f"{COLOR_RED}❌ Errore:{COLOR_RESET} Durante la generazione del report testuale.")
 
         # Visualizza i dati nel terminale
         display_data_in_terminal(data)
@@ -319,7 +361,7 @@ if __name__ == '__main__':
     # Controlla se lo script è eseguito come root per le scansioni che lo richiedono
     # Questo è un controllo semplice, potresti volerlo affinare per ogni modulo
     # if os.geteuid() != 0:
-    #     print("AVVISO: Alcune scansioni (es. permessi file critici) potrebbero richiedere permessi di root per funzionare correttamente.")
+    #     print(f"{COLOR_YELLOW}AVVISO:{COLOR_RESET} Alcune scansioni (es. permessi file critici) potrebbero richiedere permessi di root per funzionare correttamente.")
     #     print("Esegui lo script con 'sudo python3 main.py' per risultati completi.")
 
     main()
