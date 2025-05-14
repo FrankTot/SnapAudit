@@ -7,9 +7,9 @@ import sys # Importa sys per stderr
 # Assumi che questo modulo riceva dati PARSATI e STRUTTURATI
 # come liste di dizionari dai moduli di scansione.
 
-def generate_report(data: dict, output_dir='reports', format='html'): # Imposta HTML come default
+def generate_report(data: dict, output_dir='reports', format='txt'): # Imposta TXT come default
     """
-    Genera un report in formato testuale o HTML con stili migliorati.
+    Genera un report in formato testuale o HTML.
     Accetta dati strutturati (es. liste di dizionari).
 
     Args:
@@ -21,7 +21,7 @@ def generate_report(data: dict, output_dir='reports', format='html'): # Imposta 
     Returns:
         str: Il percorso completo del file del report generato, o None in caso di errore.
     """
-    print(f"  Generazione report in formato '{format}'...")
+    print(f"  Generazione report file in formato '{format}'...")
     try:
         # Crea la directory di output se non esiste
         if not os.path.exists(output_dir):
@@ -46,13 +46,31 @@ def generate_report(data: dict, output_dir='reports', format='html'): # Imposta 
                             if isinstance(content[0], dict):
                                 # Usa le chiavi del primo dizionario come intestazioni
                                 headers = list(content[0].keys())
-                                f.write("\t".join(headers) + "\n") # Intestazioni tabulate
-                                f.write("-"*(8*len(headers)) + "\n") # Linea separatore (approssimativa)
+                                # Calcola la larghezza massima per ogni colonna per allineamento
+                                col_widths = {header: len(header) for header in headers}
                                 for item in content:
-                                    # Stampa i valori del dizionario tabulati
-                                    # Usa item.get() per gestire chiavi mancanti e str() per convertire valori
-                                    values = [str(item.get(header, '')) for header in headers]
-                                    f.write("\t".join(values) + "\n")
+                                    for header in headers:
+                                        value_str = str(item.get(header, ''))
+                                        col_widths[header] = max(col_widths[header], len(value_str))
+
+                                # Scrivi l'intestazione della tabella nel file TXT
+                                header_line = "+-" + "-+-".join("-" * col_widths[h] for h in headers) + "-+"
+                                f.write(header_line + "\n")
+                                header_row = "| " + " | ".join(h.ljust(col_widths[h]) for h in headers) + " |"
+                                f.write(header_row + "\n")
+                                f.write(header_line + "\n")
+
+                                # Scrivi le righe dei dati nel file TXT
+                                for item in content:
+                                    row_values = []
+                                    for header in headers:
+                                        value_str = str(item.get(header, '')).ljust(col_widths[header])
+                                        row_values.append(value_str)
+                                    f.write("| " + " | ".join(row_values) + " |\n")
+
+                                # Scrivi la riga inferiore della tabella nel file TXT
+                                f.write(header_line + "\n")
+
                             else: # Se è una lista di altri tipi (es. stringhe)
                                 for item in content:
                                     f.write(str(item) + "\n")
@@ -64,6 +82,7 @@ def generate_report(data: dict, output_dir='reports', format='html'): # Imposta 
                 f.write(f"Report generato il: {timestamp}\n")
 
         elif format == 'html':
+            # Mantieni la generazione HTML come opzione, anche se non è quella preferita dall'utente ora
             filename = os.path.join(output_dir, f'snap_report_{timestamp}.html')
             with open(filename, 'w', encoding='utf-8') as f: # Specifica encoding
                 f.write("<!DOCTYPE html>\n")
@@ -191,14 +210,12 @@ def generate_report(data: dict, output_dir='reports', format='html'): # Imposta 
                 f.write("</html>\n")
 
         else:
-            print(f"Formato report '{format}' non supportato. Generato report TXT di default.", file=sys.stderr) # Scrive su stderr
-            # Chiama di nuovo la funzione con format='txt' per il fallback
-            return generate_report(data, output_dir, format='txt')
+            print(f"Formato report '{format}' non supportato. Non è stato generato alcun file di report.", file=sys.stderr) # Scrive su stderr
+            return None # Restituisce None se il formato non è supportato
 
-        print(f"  Report '{filename}' generato con successo.")
+        print(f"  Report file '{filename}' generato con successo.")
         return filename # Restituisce il percorso del file generato
 
     except Exception as e:
-        print(f"  Errore critico durante la generazione del report: {e}", file=sys.stderr)
+        print(f"  Errore critico durante la generazione del report file: {e}", file=sys.stderr)
         return None # Restituisce None in caso di errore critico
-
