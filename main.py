@@ -251,6 +251,14 @@ def display_menu_options():
     print("  Q. Esci")
     print("="*50) # Aumentato la larghezza
 
+def get_user_selection():
+    """Richiede all'utente una scelta valida dal menu."""
+    valid_choices = ['1', '2', '3', '4', '5', 'a', 'o', 'q']
+    while True:
+        choice = input("Seleziona un'opzione: ").strip().lower()
+        if choice in valid_choices:
+            return choice
+        print(f"{COLOR_RED}Errore:{COLOR_RESET} Scelta non valida. Riprova.")
 
 # --- Funzione Principale ---
 def main():
