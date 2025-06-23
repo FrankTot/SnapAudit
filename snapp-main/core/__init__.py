@@ -1,0 +1,1 @@
+print("Modulo Core caricato")
